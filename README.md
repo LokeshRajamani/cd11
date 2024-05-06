@@ -18,96 +18,100 @@ To implement a calculator using LEX and YACC.
 Calculator.L File:
 
 ```
-%{
-#include"y.tab.h"
-#include<math.h>
-%}
-%%
-([0-9]+|([0-9]*\.[0-9]+)([eE][-+]?[0-9]+)?) {yylval.dval=atof(yytext);return NUMBER;}
-log |
-LOG {return LOG;}
-ln |
-LN {return nLOG;}
-sin |
-SIN {return SINE;}
-cos |
-COS {return COS;}
-tan |
-TAN {return TAN;}
-mem {return MEM;}
-[\t];
-\$ return 0;
-\n|. return yytext[0];
-%%
-```
+#include <stdio.h>
+#include <string.h>
 
-
-Calculator.y file:
-
-```
-%{
-double memvar;
-%}
-
-%union { double dval; }
-
-%token <dval> NUMBER
-%token <dval> MEM
-%token LOG nLOG SINE COS TAN
-%left '-' '+'
-%left '*' '/'
-%right '^'
-%left LOG nLOG SINE COS TAN
-
-%nonassoc UMINUS
-%type <dval> expression
-
-%%
-
-start: statement '\n'
-| start statement '\n'
-;
-
-statement: MEM '=' expression { memvar = $3; }
-| expression { printf("Answer=%g\n", $1); }
-;
-
-expression: expression '+' expression {$$ = $1 + $3; }
-| expression '-' expression {$$ = $1 - $3; }
-| expression '*' expression {$$ = $1 * $3; }
-| expression '/' expression { if ($3 == 0)
-yyerror("divide by zero"); else
-$$
- = $1 / $3;
-}
-| expression '^' expression {$$ = pow($1, $3); }
-;
-
-expression: '-' expression %prec UMINUS {$$ = -$2; }
-| '(' expression ')' {$$ = $2; }
-| LOG expression {$$ = log($2) / log(10); }
-| nLOG expression {$$ = log($2); }
-| SINE expression {$$ = sin($2 * 3.14 / 180); }
-| COS expression {$$ = cos($2 * 3.14 / 180); }
-| TAN expression {$$ = tan($2 * 3.14 / 180); }
-| NUMBER {$$ = $1; }
-| MEM {$$ = memvar; }
-;
-
-%%
+struct op {
+    char l;
+    char r[20];
+} op[10], pr[10];
 
 int main() {
-printf("Enter the expression: ");
-yyparse();
-return 0;
-}
+    int a, i, k, j, n, z = 0, m, q;
+    char *p, *l;
+    char temp, t;
+    char *tem;
 
-int yyerror(char *error) {
-printf("%s\n", error);
-return 0;
+    printf("Enter the Number of Values: ");
+    scanf("%d", &n);
+
+    for (i = 0; i < n; i++) {
+        printf("left: ");
+        scanf(" %c", &op[i].l); // Notice the space before %c to consume the newline character
+        printf("\tright: ");
+        scanf("%s", op[i].r);
+    }
+
+    printf("Intermediate Code\n");
+    for (i = 0; i < n; i++) {
+        printf("%c=%s\n", op[i].l, op[i].r);
+    }
+
+    for (i = 0; i < n - 1; i++) {
+        temp = op[i].l;
+        for (j = 0; j < n; j++) {
+            p = strchr(op[j].r, temp);
+            if (p) {
+                pr[z].l = op[i].l;
+                strcpy(pr[z].r, op[i].r);
+                z++;
+            }
+        }
+    }
+
+    pr[z].l = op[n - 1].l;
+    strcpy(pr[z].r, op[n - 1].r);
+    z++;
+
+    printf("\nAfter Dead Code Elimination\n");
+    for (k = 0; k < z; k++) {
+        printf("%c\t=%s\n", pr[k].l, pr[k].r);
+    }
+
+    for (m = 0; m < z; m++) {
+        tem = pr[m].r;
+        for (j = m + 1; j < z; j++) {
+            p = strstr(tem, pr[j].r);
+            if (p) {
+                t = pr[j].l;
+                pr[j].l = pr[m].l;
+                for (i = 0; i < z; i++) {
+                    l = strchr(pr[i].r, t);
+                    if (l) {
+                        a = l - pr[i].r;
+                        printf("pos: %d", a);
+                        pr[i].r[a] = pr[m].l;
+                    }
+                }
+            }
+        }
+    }
+
+    printf("Eliminate Common Expression\n");
+    for (i = 0; i < z; i++) {
+        printf("%c=%s\n", pr[i].l, pr[i].r);
+    }
+
+    for (i = 0; i < z; i++) {
+        for (j = i + 1; j < z; j++) {
+            q = strcmp(pr[i].r, pr[j].r);
+            if ((pr[i].l == pr[j].l) &&!q) {
+                pr[i].l = '\0';
+                strcpy(pr[i].r, "\0");
+            }
+        }
+    }
+
+    printf("Optimized Code\n");
+    for (i = 0; i < z; i++) {
+        if (pr[i].l!= '\0') {
+            printf("%c=%s\n", pr[i].l, pr[i].r);
+        }
+    }
+
+    return 0;
 }
 ```
-
 
 # OUTPUT:
 
